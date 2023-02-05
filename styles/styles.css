@@ -249,7 +249,7 @@ a[href*="instagram"] img{
 a[href*="instagram"] img:hover{
     opacity: 1;
     transform: scale(1.2);
-    transition: 0.2s;
+    transition: 0.1s;
 }
 
 a[href*="linkedin"] img{
@@ -258,7 +258,7 @@ a[href*="linkedin"] img{
 a[href*="linkedin"] img:hover{
     opacity: 1;
     transform: scale(1.2);
-    transition: 0.2s;
+    transition: 0.1s;
 }
 
 a[href*="github"] img{
@@ -267,5 +267,5 @@ a[href*="github"] img{
 a[href*="github"] img:hover{
     opacity: 1;
     transform: scale(1.2);
-    transition: 0.2s;
+    transition: 0.1s;
 }
