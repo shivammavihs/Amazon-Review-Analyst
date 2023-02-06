@@ -117,8 +117,7 @@ class Product():
         ratings_per = []
         for rating in ratings_html:
             ratings_per.append(int(re.findall(r'[0-9]+',str(rating).split()[1])[0]))
-
-        ratings = {f'{i} star': j for i, j in enumerate(ratings_per, start=1)}
+        ratings = {f'{5-i} star': j for i, j in enumerate(ratings_per)}
 
         average_rating = soup.find('span', attrs={'data-hook': 'rating-out-of-text'})
         
