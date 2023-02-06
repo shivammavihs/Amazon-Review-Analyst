@@ -25,6 +25,7 @@ assets_path = os.path.join(cwd, r'assets')
 styles_path = os.path.join(cwd, r'styles')
 
 page_icon = Image.open(os.path.join(assets_path, 'conversation.png'))
+default_image = Image.open(os.path.join(assets_path, 'default.jpg'))
 
 # com.html(htmls.background)
 
@@ -85,6 +86,9 @@ if 'num_pages' not in st.session_state:
 
 if 'continue_flow' not in st.session_state:
     st.session_state.continue_flow = False      # for page increment in page number field
+
+if 'pipe' not in st.session_state:
+    st.session_state.pipe = False           # for storing the pipe
 
 ## Main header of the web app
 st.write(htmls.header, unsafe_allow_html=True)
@@ -154,7 +158,6 @@ with form:
     # c1, c2, c3 = st.columns((3,1,3))
     
     submit = st.button('**Submit**')
-
 if (submit and url) or (st.session_state.received_url and url) or st.session_state.rerunning:
 
     if submit or st.session_state.received_url:
@@ -180,6 +183,8 @@ if (submit and url) or (st.session_state.received_url and url) or st.session_sta
     with body.container():
         if not st.session_state.product:
             with st.spinner('Searching product...'):
+                if not st.session_state.pipe:
+                    st.session_state.pipe = get_pipe()
                 # print(url)
                 st.session_state.product =  Product(url)
                 # print()
@@ -191,7 +196,10 @@ if (submit and url) or (st.session_state.received_url and url) or st.session_sta
             st.stop()
     
         a, b = st.columns([1,5], gap='small')
-        a.image(product.image)
+        if product.image:
+            a.image(product.image)
+        else:
+            a.image(default_image)
         b.write(f'### [{product.product_name}]({product.product_link})', )
 
 
@@ -245,6 +253,7 @@ if (submit and url) or (st.session_state.received_url and url) or st.session_sta
                 proceed = st.button('Proceed', on_click=change_radio)
             else:
                 st.session_state.num_pages = product.num_pages
+                st.session_state.proceed = True
         
         num_pages = st.session_state.num_pages
 
@@ -297,7 +306,7 @@ if (submit and url) or (st.session_state.received_url and url) or st.session_sta
             progress.empty()
 
             with progress.container():
-                pipe = get_pipe()
+                pipe = st.session_state.pipe
 
                 with st.spinner('Analyzing all reviews...'):    
                     reviews_list = reviews_df.cleaned_reviews.to_list()
