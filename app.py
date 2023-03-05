@@ -1,11 +1,23 @@
 import streamlit as st
 
+import numpy as np
 import pandas as pd
 import re
 
 import os
 
-from transformers import pipeline
+from keras.models import load_model
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+import pickle
+
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
+
+# Download the stopwords if not already downloaded
+nltk.download('stopwords')
+nltk.download('punkt')
 
 from amazon_review import Product
 import htmls
@@ -87,8 +99,9 @@ if 'num_pages' not in st.session_state:
 if 'continue_flow' not in st.session_state:
     st.session_state.continue_flow = False      # for page increment in page number field
 
-if 'pipe' not in st.session_state:
-    st.session_state.pipe = False           # for storing the pipe
+if 'model' not in st.session_state:
+    st.session_state.model = False           # for storing the model
+    st.session_state.tokenizer = False           # for storing the tokenizer
 
 ## Main header of the web app
 st.write(htmls.header, unsafe_allow_html=True)
@@ -127,26 +140,55 @@ def preprocess(reviews_df):
         pandas.core.frame.DataFrame: A pandas dataframe with preprocessed test in new column "cleaned reviews".
     """
     reviews_df['cleaned_reviews'] = reviews_df['reviews'].str.lower()
-    clean = re.compile('<.*?>')
-    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda text: re.sub(clean, '', text))
-    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda text: re.sub(r'http\S+', '', text))
-    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda text: re.sub('[^A-Za-z0-9]+', '', text))
-    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda text: re.sub(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", '', text))
+    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda r: re.sub(r'http\S+', '', r))
+    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda r: re.sub(r'\S*@\S+', '', r))
+    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda r: re.sub(r'\S*#\S+', '', r))
+    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda r: re.sub(r'<.*?>', '', r))
+
+    translate_values = {'â€™': "'"}
+
+    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda r: r.translate(translate_values))
+    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda r: re.sub(r'[^a-zA-Z\'\s]', ' ', r))
+    # reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda r: re.sub(r'[^a-zA-Z0-9\'\s]', ' ', r))
+    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda r: r.strip())
+
+    # Get the list of English stopwords
+    english_stopwords = nltk.corpus.stopwords.words('english')
+
+    not_stopwords = ['but', 'no', 'nor', 'not', "don't", "aren't", "couldn't", "didn't", "doesn't", "hadn't", "hasn't", "haven't", "isn't", "mightn't", "mustn't", "needn't", "shan't", "shouldn't", "wasn't", "weren't", "won't", "wouldn't", 'this', 'other', 'others', 'than']
+
+    stopwords = [i for i in english_stopwords if i not in not_stopwords]
+
+    stopwords.extend([' ', ''])
+    
+    stemmer = PorterStemmer()
+    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda r: nltk.word_tokenize(r))
+    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda r: [stemmer.stem(word) for word in r])
+    stopwords = [stemmer.stem(word) for word in stopwords]
+
+    reviews_df['cleaned_reviews'] = reviews_df['cleaned_reviews'].apply(lambda r: ' '.join([i for i in r if i not in stopwords]))
+
     return reviews_df
 
 @st.cache(allow_output_mutation=True, show_spinner=False)
-def get_pipe():
+def load_ml_model():
     """This function loads BERT Pretrained model for sentiment analysis and creates a pipeline.
 
     Model used: finiteautomata/beto-sentiment-analysis
 
 
     Returns:
-        transformers.pipelines.text_classification.TextClassificationPipeline: a transmormers pipeline.
+        transformers.modellines.text_classification.TextClassificationPipeline: a transmormers pipeline.
     """
-    # print('Loading BERT Model...')
-    pipe = pipeline('text-classification', 'finiteautomata/beto-sentiment-analysis', max_length=512, truncation=True)
-    return pipe
+    model_name = r'amazon_review_sentiment_cnn_model.h5'
+    tokenizer_name = r'tokenizer.pickle'
+    model_files_path = os.path.join(cwd, f'model')
+    model_path = os.path.join(model_files_path, model_name)
+    tokenizer_path = os.path.join(model_files_path, tokenizer_name)
+    model = load_model(model_path)
+    with open(tokenizer_path, 'rb') as f:
+        tokenizer = pickle.load(f)
+    return model, tokenizer
 
 
 form = st.container()   # container for input 
@@ -183,8 +225,8 @@ if (submit and url) or (st.session_state.received_url and url) or st.session_sta
     with body.container():
         if not st.session_state.product:
             with st.spinner('Searching product...'):
-                if not st.session_state.pipe:
-                    st.session_state.pipe = get_pipe()
+                if not st.session_state.model:
+                    st.session_state.model, st.session_state.tokenizer = load_ml_model()
                 # print(url)
                 st.session_state.product =  Product(url)
                 # print()
@@ -306,26 +348,30 @@ if (submit and url) or (st.session_state.received_url and url) or st.session_sta
             progress.empty()
 
             with progress.container():
-                pipe = st.session_state.pipe
+                model = st.session_state.model
+                tokenizer = st.session_state.tokenizer
 
                 with st.spinner('Analyzing all reviews...'):    
                     reviews_list = reviews_df.cleaned_reviews.to_list()
-                    predictions = pipe(reviews_list)
-                    reviews_df['sentiment'] = [i['label'].lower() for i in predictions]
+                    reviews_list_encoded = tokenizer.texts_to_sequences(reviews_list)
+                    reviews_list_encoded = pad_sequences(reviews_list_encoded, padding='post')
+                    predictions = np.argmax(model.predict(reviews_list_encoded), axis=1)
+                    mapping = {0:'negative', 1:'mixed', 2:'positive'}
+                    reviews_df['sentiment'] = [mapping[i] for i in predictions]
                     sentiment_counts = reviews_df['sentiment'].value_counts().to_dict()
 
-                pos = sentiment_counts.get('pos', 0)
-                neg = sentiment_counts.get('neg', 0)
-                neu = sentiment_counts.get('neu', 0)
+                positive = sentiment_counts.get('positive', 0)
+                negative = sentiment_counts.get('negative', 0)
+                mixed = sentiment_counts.get('mixed', 0)
 
                 a, c1, c2, c3, b = st.columns((1,2,2,2,1), gap='small')
-                c1.metric(label='Positive Reviews', value=pos)
-                c2.metric(label='Mixed Reviews', value=neu)
-                c3.metric(label='Negative Reviews', value=neg)
+                c1.metric(label='Positive Reviews', value=positive)
+                c2.metric(label='Mixed Reviews', value=mixed)
+                c3.metric(label='Negative Reviews', value=negative)
 
                 
-                yes = pos + (neu/2)
-                no = neg + (neu/2)
+                yes = positive + (mixed/2)
+                no = negative + (mixed/2)
 
                 if yes > no:
                     max = yes
@@ -345,16 +391,16 @@ if (submit and url) or (st.session_state.received_url and url) or st.session_sta
                 
                 a, b, c = st.columns(3)
 
-                with a.expander(f"{pos} Posivive Reviews"):
-                    pos_df = reviews_df[reviews_df.sentiment == 'pos'].reset_index()
+                with a.expander(f"{positive} Posivive Reviews"):
+                    pos_df = reviews_df[reviews_df.sentiment == 'positive'].reset_index()
                     pos_df.index = pos_df.index + 1
                     st.table(pos_df['reviews'])
-                with b.expander(f"{neu} Mixed Reviews"):
-                    mix_df = reviews_df[reviews_df.sentiment == 'neu'].reset_index()
+                with b.expander(f"{mixed} Mixed Reviews"):
+                    mix_df = reviews_df[reviews_df.sentiment == 'mixed'].reset_index()
                     mix_df.index = mix_df.index + 1
                     st.table(mix_df['reviews'])
-                with c.expander(f"{neg} Negative Reviews"):
-                    neg_df = reviews_df[reviews_df.sentiment == 'neg'].reset_index()
+                with c.expander(f"{negative} Negative Reviews"):
+                    neg_df = reviews_df[reviews_df.sentiment == 'negative'].reset_index()
                     neg_df.index = neg_df.index + 1
                     st.table(neg_df['reviews'])
 

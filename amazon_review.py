@@ -20,6 +20,7 @@ class Product():
 
 
     def pagination(self, page_no):
+        print(f'url={self.url + str(page_no)}')
         soup = Product.get_soup(url=self.url + str(page_no))
         
         reviews_html = soup.find_all('span', class_='a-size-base review-text review-text-content')
@@ -36,14 +37,14 @@ class Product():
         i = 1
         reviews = []
         print("Total number of pages: ", self.num_pages)
-        while True:
-            print(f'getting reviews from page no. {i+1}')
+        while True: 
+            print(f'getting reviews from page no. {i}')
             page_reviews = self.pagination(i)
             if page_reviews:    
                 reviews.extend(page_reviews)
+                i+=1
             else:
                 continue
-            i+=1
             if i == self.num_pages:
                 break
 
@@ -53,7 +54,8 @@ class Product():
 
     @staticmethod
     def get_soup(url):
-        result = requests.get(url=url).text
+        headers = {"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36"}
+        result = requests.get(url=url, headers=headers).text
         soup = bs4.BeautifulSoup(result,'html.parser') 
         return soup       
 
@@ -78,18 +80,21 @@ class Product():
     @staticmethod
     def get_review_details(url):
 
-        soup = Product.get_soup(url=url + str(1))
-        
+        soup = Product.get_soup(url=url)
+        # print(url)
         # ratings_reviews = soup.find('div', class_='a-row a-spacing-base a-size-base').text.strip().replace(',', '').split()
         ratings_reviews = soup.find('div', class_='a-row a-spacing-base a-size-base')
+        # print(f'{ratings_reviews=}')
         i  = 1
         while not ratings_reviews:
-            print(f'trying {i}')
-            soup = Product.get_soup(url=url + str(1))
+            print(f'{ratings_reviews=}')
+            print(f'trying for reviews {i}')
+            soup = Product.get_soup(url=url)
+            print(f'{soup=}')
             ratings_reviews = soup.find('div', class_='a-row a-spacing-base a-size-base')
 
             i+=1
-            if i==11:
+            if i==50:
                 total_ratings =  False
                 total_reviews =  False
                 num_pages = False
@@ -107,11 +112,11 @@ class Product():
 
         i=1
         while not ratings_html:
-            print(f'trying {i}')
-            soup = Product.get_soup(url=url + str(1))
+            print(f'trying for ratings {i}')
+            soup = Product.get_soup(url=url)
             ratings_html = soup.find_all('div', attrs={'class': 'a-meter'})
             i+=1
-            if i==11:
+            if i==50:
                 break
 
         ratings_per = []
@@ -123,12 +128,13 @@ class Product():
         
         i = 1
         while not average_rating:
-            print(f'trying {i}')
-            soup = Product.get_soup(url=url + str(1))
+            print(f'trying for average ratings {i}')
+            soup = Product.get_soup(url=url)
             average_rating = soup.find('span', attrs={'data-hook': 'rating-out-of-text'})
             i+=1
-            if i==11:
+            if i==50:
                 average_rating = False
+                break
 
         if not ratings:
             ratings = False
