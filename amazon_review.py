@@ -87,10 +87,10 @@ class Product():
         # print(f'{ratings_reviews=}')
         i  = 1
         while not ratings_reviews:
-            print(f'{ratings_reviews=}')
+            # print(f'{ratings_reviews=}')
             print(f'trying for reviews {i}')
             soup = Product.get_soup(url=url)
-            print(f'{soup=}')
+            # print(f'{soup=}')
             ratings_reviews = soup.find('div', class_='a-row a-spacing-base a-size-base')
 
             i+=1
