@@ -18,7 +18,7 @@
 
 ![Product Image and Name](assets/Markdown_Images/Product_name.png)
 
-##### And after that if there are ratings and reviews available for the product then the number of `Star ratings` will be displayed in the form of a `Doughnut Pie Chart` and below that average rating of the product and total number of ratings and reviews will bee displayed. 
+##### And after that if there are ratings and reviews available for the product then the number of `Star ratings` will be displayed in the form of a `Doughnut Pie Chart` and below that average rating of the product and total number of ratings and reviews will be displayed. 
 
 ![Piechart](assets/Markdown_Images/piechart.png)
 
