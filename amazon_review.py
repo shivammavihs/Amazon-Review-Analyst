@@ -7,6 +7,13 @@ class Product():
 
     def __init__(self, product_url):
         self.product_url = product_url
+        self.total_ratings = False
+        self.total_reviews = False
+        self.num_pages = False
+        self.ratings = False
+        self.average_ratings = False
+        self.image = False
+        self.product_name = False
         try:
             self.product_id = re.findall('/([A-Z0-9]{10})', self.product_url)[0]
         except IndexError:

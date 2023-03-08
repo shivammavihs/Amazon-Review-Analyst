@@ -65,7 +65,7 @@ def add_bg_from_url(image_file):
          unsafe_allow_html=True
      )
 
-add_bg_from_url(r'Background.jpg')
+add_bg_from_url(os.path.join(assets_path, r'Product_Background.jpg'))
 
 ## Injecting custom css defines in styles.css in styles directory
 with open(os.path.join(styles_path, 'styles.css')) as css:
@@ -99,6 +99,9 @@ if 'num_pages' not in st.session_state:
 if 'continue_flow' not in st.session_state:
     st.session_state.continue_flow = False      # for page increment in page number field
 
+if 'radio_state' not in st.session_state:
+    st.session_state.radio_state = False      # for page increment in page number field
+
 if 'model' not in st.session_state:
     st.session_state.model = False           # for storing the model
     st.session_state.tokenizer = False           # for storing the tokenizer
@@ -118,6 +121,7 @@ def accept_url():
 def change_radio():
     """this functions the sets the value of session state varibles for radio buttons and proceed button 
     """
+    print('changing radio selected and proceed to true')
     st.session_state.radio_selected = True
     st.session_state.proceed = True
 
@@ -170,7 +174,7 @@ def preprocess(reviews_df):
 
     return reviews_df
 
-@st.cache(allow_output_mutation=True, show_spinner=False)
+@st.cache_resource
 def load_ml_model():
     """This function loads BERT Pretrained model for sentiment analysis and creates a pipeline.
 
@@ -180,8 +184,8 @@ def load_ml_model():
     Returns:
         transformers.modellines.text_classification.TextClassificationPipeline: a transmormers pipeline.
     """
-    model_name = r'amazon_review_sentiment_cnn_model.h5'
-    tokenizer_name = r'tokenizer.pickle'
+    model_name = r'amazon_review_sentiment_cnn_model_v2.h5'
+    tokenizer_name = r'tokenizer_v2.pickle'
     model_files_path = os.path.join(cwd, f'model')
     model_path = os.path.join(model_files_path, model_name)
     tokenizer_path = os.path.join(model_files_path, tokenizer_name)
@@ -195,18 +199,10 @@ form = st.container()   # container for input
 with form:
     ## Text field to get URL of the product
     url = st.text_input('Enter the url: ', placeholder='Enter the product URL', label_visibility='collapsed', on_change=accept_url, help='Copy the URL of the product from amazon and paste.')
-
-    ## Submit button
-    # c1, c2, c3 = st.columns((3,1,3))
-    
     submit = st.button('**Submit**')
+
 if (submit and url) or (st.session_state.received_url and url) or st.session_state.rerunning:
 
-    if submit or st.session_state.received_url:
-        st.session_state.radio_selected = False
-        st.session_state.proceed = False
-        st.session_state.num_pages = 0
-        st.session_state.continue_flow = False
 
     st.session_state.rerunning = True
     st.session_state.received_url = False
@@ -216,12 +212,15 @@ if (submit and url) or (st.session_state.received_url and url) or st.session_sta
 
     body = st.empty()
     if st.session_state.new_url != st.session_state.old_url:
+        st.session_state.proceed = False
+        st.session_state.num_pages = 0
+        st.session_state.continue_flow = False
+        st.session_state.radio_selected = False
         st.session_state.old_url = st.session_state.new_url
         st.session_state.product = False
         body.empty()
         print(f'inside if {body}')
 
-    print(body)
     with body.container():
         if not st.session_state.product:
             with st.spinner('Searching product...'):
@@ -232,177 +231,190 @@ if (submit and url) or (st.session_state.received_url and url) or st.session_sta
                 # print()
 
         product = st.session_state.product
-        # print(product)
         if product.__str__() == 'No product found':
             st.error('Unable to find the product. Please retry.')
-            st.stop()
-    
-        a, b = st.columns([1,5], gap='small')
-        if product.image:
-            a.image(product.image)
+            # st.stop()
         else:
-            a.image(default_image)
-        b.write(f'### [{product.product_name}]({product.product_link})', )
-
-
-        all_ratings  = product.ratings
-
-        # pie_chart = px.pie(values=list(all_ratings.values()), names=list(all_ratings.keys()), hole=0.5) 
-        # st.plotly_chart(pie_chart)
-
-        keys = list(all_ratings.keys())
-        bold_keys = [f'<b>{i}</b>' for i in keys]
-        fig = go.Figure(data=[go.Pie(labels=bold_keys, values=list(all_ratings.values()), textinfo='label+percent', hole=0.5, title="<b>All Reviews</b>", title_font = dict(size=26,family='Verdana', 
-                                        color='#571c25'))], layout={'showlegend':False, 'colorway':plotly.colors.diverging.RdBu})
-
-        fig.update_layout(legend=dict(
-                                x=0.2,
-                                xanchor='right',
-                                #   bgcolor='#e5e5e5',
-                                bordercolor='#7f7f7f',
-                                #   borderwidth=2,
-                                # orientation='h',
-                                traceorder='normal'
-                                ),
-                            paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)",
-                            height=500, width=500, margin=go.layout.Margin(t=20))
-    
-        fig.update_traces(textinfo='label+percent', textfont_size=20, textfont={'color': '#571c25'}, textposition='outside',)
-
-        st.markdown(htmls.horizontal_line, unsafe_allow_html=True)
-        
-        left, middle, right = st.columns((1.25, 6, 1))
-
-        with middle:
-            st.plotly_chart(fig, use_container_width=True)
-        
-        a, c1, c2, c3, b = st.columns((1,2,2,2,1), gap='small')
-        
-        c1.metric(label='Total Ratings', value=product.total_ratings)
-        c2.metric(label='Total Reviews', value=product.total_reviews)
-        avg_ratings = product.average_ratings.split()
-        c3.metric(label='Average Ratings', value=f"{avg_ratings[0]}/{avg_ratings[-1]}")
-
-        st.markdown(htmls.horizontal_line, unsafe_allow_html=True)
-        
-        rad_options = ('Yes (this might take little longer)', 'No (if you to check for fitst n pages)')
-        if not st.session_state.radio_selected:
-            if product.num_pages > 5:
-                # st.markdown(f"### {product.num_pages} pages available. Do you want to run for all pages?")
-                st.markdown(f"""<h3 style="text-align: center;">{product.num_pages} pages available. Do you want to run for all pages?</h3>""", unsafe_allow_html=True)
-                a3, b3, c3 = st.columns((3,2,3))
-                st.session_state.radio_state = b3.radio('Do you want to run for all pages?', rad_options, label_visibility='collapsed')
-                proceed = st.button('Proceed', on_click=change_radio)
+            a, b = st.columns([1,5], gap='small')
+            if product.image:
+                a.image(product.image)
             else:
-                st.session_state.num_pages = product.num_pages
-                st.session_state.proceed = True
+                a.image(default_image)
+            b.write(f'### [{product.product_name}]({product.product_link})', )
+
+
+            all_ratings  = product.ratings
+
+            # pie_chart = px.pie(values=list(all_ratings.values()), names=list(all_ratings.keys()), hole=0.5) 
+            # st.plotly_chart(pie_chart)
+
+            keys = list(all_ratings.keys())
+            bold_keys = [f'<b>{i}</b>' for i in keys]
+            fig = go.Figure(data=[go.Pie(labels=bold_keys, values=list(all_ratings.values()), textinfo='label+percent', hole=0.5, title="<b>All Reviews</b>", title_font = dict(size=26,family='Verdana', 
+                                            color='#571c25'))], layout={'showlegend':False, 'colorway':plotly.colors.diverging.RdBu})
+
+            fig.update_layout(legend=dict(
+                                    x=0.2,
+                                    xanchor='right',
+                                    #   bgcolor='#e5e5e5',
+                                    bordercolor='#7f7f7f',
+                                    #   borderwidth=2,
+                                    # orientation='h',
+                                    traceorder='normal'
+                                    ),
+                                paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)",
+                                height=500, width=500, margin=go.layout.Margin(t=20))
         
-        num_pages = st.session_state.num_pages
+            fig.update_traces(textinfo='label+percent', textfont_size=20, textfont={'color': '#571c25'}, textposition='outside',)
 
-        progress = st.empty()
-        with progress.container():
-            if (st.session_state.proceed and not st.session_state.num_pages):
-                # print(f'{st.session_state.radio_state=}')
-                if st.session_state.radio_state == rad_options[1]:
-                    st.markdown(f"#### Enter the number of pages out of {product.num_pages} available pages.")
-                    page_num = st.number_input('enter the number of pages', value=0, min_value=0, max_value=product.num_pages, label_visibility='collapsed', key='page', on_change=set_page_num, args=('Hold', ))
-                    # print(f'{page_num=}, {st.session_state.num_pages=}, {st.session_state.continue_flow=}')
-                    st.button('Continue', on_click=set_page_num, args=(True, ))
-                    if st.session_state.continue_flow == True:
-                        st.session_state.num_pages = page_num
-                    else:
-                        st.session_state.num_pages = 0
-                else:
-                    st.session_state.num_pages = product.num_pages
-
-        num_pages = st.session_state.num_pages
-        if st.session_state.proceed and st.session_state.num_pages:
-            i = 1
-            reviews = []
-            with progress.container():
-                bar_header = st.empty()
-                bar = st.progress(0)
-                bar_caption = st.empty()
-            while True:
-                bar_header.write(f"### Total number of pages to fetch {num_pages}")
-                if i == num_pages+1:
-                    break
-                print(f'getting reviews from page no. {i}')
-                bar.progress(i/num_pages)
-                bar_caption.caption(f'fetching page number {i}')
-                page_reviews = product.pagination(i)
-                if page_reviews:    
-                    reviews.extend(page_reviews)
-                else:
-                    continue
-                i+=1
-
-            bar_header.empty()
-            bar.empty()
-            bar_caption.empty()
-
-            reviews = [i[0] if len(i) != 0 else '' for i in reviews]
-            reviews_df = pd.DataFrame({'reviews':reviews})
-            reviews_df = preprocess(reviews_df)
-
-            progress.empty()
-
-            with progress.container():
-                model = st.session_state.model
-                tokenizer = st.session_state.tokenizer
-
-                with st.spinner('Analyzing all reviews...'):    
-                    reviews_list = reviews_df.cleaned_reviews.to_list()
-                    reviews_list_encoded = tokenizer.texts_to_sequences(reviews_list)
-                    reviews_list_encoded = pad_sequences(reviews_list_encoded, padding='post')
-                    predictions = np.argmax(model.predict(reviews_list_encoded), axis=1)
-                    mapping = {0:'negative', 1:'mixed', 2:'positive'}
-                    reviews_df['sentiment'] = [mapping[i] for i in predictions]
-                    sentiment_counts = reviews_df['sentiment'].value_counts().to_dict()
-
-                positive = sentiment_counts.get('positive', 0)
-                negative = sentiment_counts.get('negative', 0)
-                mixed = sentiment_counts.get('mixed', 0)
-
+            st.markdown(htmls.horizontal_line, unsafe_allow_html=True)
+            
+            if product.total_reviews != 0:
+                if product.average_ratings == '0 out of 5':
+                    st.error('Not ratings yet.')
+                    a, c1, c2, c3, b = st.columns((1,2,2,2,1), gap='small')
+                    c2.metric(label='Total Reviews', value=product.total_reviews)
+                left, middle, right = st.columns((1.25, 6, 1))
+                with middle:
+                    st.plotly_chart(fig, use_container_width=True)
                 a, c1, c2, c3, b = st.columns((1,2,2,2,1), gap='small')
-                c1.metric(label='Positive Reviews', value=positive)
-                c2.metric(label='Mixed Reviews', value=mixed)
-                c3.metric(label='Negative Reviews', value=negative)
-
                 
-                yes = positive + (mixed/2)
-                no = negative + (mixed/2)
+                c1.metric(label='Total Ratings', value=product.total_ratings)
+                c2.metric(label='Total Reviews', value=product.total_reviews)
+                avg_ratings = product.average_ratings.split()
+                c3.metric(label='Average Ratings', value=f"{avg_ratings[0]}/{avg_ratings[-1]}")
 
-                if yes > no:
-                    max = yes
-                else:
-                    max = no
-                min = -max
-
-                a, b, c = st.columns(3)
-                percent = ((yes - no) - min)/(max - min) * 100
-                if percent >= 75:
-                    st.balloons()
-                    b.write('## You should buy this product😊')
-                elif percent < 75 and percent >= 25:
-                    b.write(f'## You should consider this product {round(percent)}%🤔')
-                else:
-                    b.write('## You should not buy this product😔')
+                st.markdown(htmls.horizontal_line, unsafe_allow_html=True)
                 
-                a, b, c = st.columns(3)
+                rad_options = ('Yes (this might take more time for larger number of pages)', 'No (to analyse reviews from latest number of pages)')
+                print('1', st.session_state.proceed)
+                if not st.session_state.proceed:
+                    if product.num_pages > 5:
+                        # st.markdown(f"### {product.num_pages} pages available. Do you want to run for all pages?")
+                        st.markdown(f"""<h3 style="text-align: center;">{product.num_pages} pages available. Do you want to run for all pages?</h3>""", unsafe_allow_html=True)
+                        a3, b3, c3 = st.columns((3,2,3))
+                        st.session_state.radio_state = b3.radio('Do you want to run for all pages?', rad_options, label_visibility='collapsed')
+                        proceed = st.button('Proceed', on_click=change_radio)
+                    else:
+                        st.session_state.num_pages = product.num_pages
+                        st.session_state.proceed = True
+                
+                num_pages = st.session_state.num_pages
 
-                with a.expander(f"{positive} Posivive Reviews"):
-                    pos_df = reviews_df[reviews_df.sentiment == 'positive'].reset_index()
-                    pos_df.index = pos_df.index + 1
-                    st.table(pos_df['reviews'])
-                with b.expander(f"{mixed} Mixed Reviews"):
-                    mix_df = reviews_df[reviews_df.sentiment == 'mixed'].reset_index()
-                    mix_df.index = mix_df.index + 1
-                    st.table(mix_df['reviews'])
-                with c.expander(f"{negative} Negative Reviews"):
-                    neg_df = reviews_df[reviews_df.sentiment == 'negative'].reset_index()
-                    neg_df.index = neg_df.index + 1
-                    st.table(neg_df['reviews'])
+                progress = st.empty()
+                with progress.container():
+                    if (st.session_state.proceed and not st.session_state.num_pages):
+                        # print(f'{st.session_state.radio_state=}')
+                        if st.session_state.radio_state == rad_options[1]:
+                            st.markdown(f"#### Specify the number of pages to analyze from {product.num_pages} available pages.")
+                            page_num = st.number_input('enter the number of pages', value=0, min_value=0, max_value=product.num_pages, label_visibility='collapsed', key='page', on_change=set_page_num, args=('Hold', ))
+                            # print(f'{page_num=}, {st.session_state.num_pages=}, {st.session_state.continue_flow=}')
+                            st.button('Continue', on_click=set_page_num, args=(True, ))
+                            if st.session_state.continue_flow == True:
+                                st.session_state.num_pages = page_num
+                            else:
+                                st.session_state.num_pages = 0
+                        else:
+                            st.session_state.num_pages = product.num_pages
+
+                num_pages = st.session_state.num_pages
+                if st.session_state.proceed and st.session_state.num_pages:
+                    i = 1
+                    reviews = []
+                    with progress.container():
+                        bar_header = st.empty()
+                        bar = st.progress(0)
+                        bar_caption = st.empty()
+                    while True:
+                        bar_header.write(f"### Total number of pages to fetch {num_pages}")
+                        if i == num_pages+1:
+                            break
+                        print(f'getting reviews from page no. {i}')
+                        bar.progress(i/num_pages)
+                        bar_caption.caption(f'fetching page number {i}')
+                        page_reviews = product.pagination(i)
+                        if page_reviews:    
+                            reviews.extend(page_reviews)
+                        else:
+                            continue
+                        i+=1
+
+                    bar_header.empty()
+                    bar.empty()
+                    bar_caption.empty()
+
+                    reviews = [i[0] if len(i) != 0 else '' for i in reviews]
+                    reviews_df = pd.DataFrame({'reviews':reviews})
+                    reviews_df['reviews'] = reviews_df['reviews'].apply(lambda r: re.sub(r'<.*?>', ' ', r))
+
+                    reviews_df = preprocess(reviews_df)
+
+                    progress.empty()
+
+                    with progress.container():
+                        model = st.session_state.model
+                        tokenizer = st.session_state.tokenizer
+
+                        with st.spinner('Analyzing all reviews...'):    
+                            reviews_list = reviews_df.cleaned_reviews.to_list()
+                            reviews_list_encoded = tokenizer.texts_to_sequences(reviews_list)
+                            reviews_list_encoded = pad_sequences(reviews_list_encoded, padding='post')
+                            predictions = np.argmax(model.predict(reviews_list_encoded), axis=1)
+                            mapping = {0:'negative', 1:'mixed', 2:'positive'}
+                            reviews_df['sentiment'] = [mapping[i] for i in predictions]
+                            sentiment_counts = reviews_df['sentiment'].value_counts().to_dict()
+
+                        positive = sentiment_counts.get('positive', 0)
+                        negative = sentiment_counts.get('negative', 0)
+                        mixed = sentiment_counts.get('mixed', 0)
+
+                        a, c1, c2, c3, b = st.columns((1,2,2,2,1), gap='small')
+                        c1.metric(label='Positive Reviews', value=positive)
+                        c2.metric(label='Mixed Reviews', value=mixed)
+                        c3.metric(label='Negative Reviews', value=negative)
+
+                        
+                        yes = positive + (mixed/2)
+                        no = negative + (mixed/2)
+
+                        if yes > no:
+                            max = yes
+                        else:
+                            max = no
+                        min = -max
+
+                        a, b, c = st.columns(3)
+                        percent = ((yes - no) - min)/(max - min) * 100
+                        if percent >= 75:
+                            # st.balloons()
+                            b.write('## You should buy this product😊')
+                        elif percent < 75 and percent >= 25:
+                            b.write(f'## You should consider this product {round(percent)}%🤔')
+                        else:
+                            b.write('## You should not buy this product😔')
+                        
+                        a, b, c = st.columns(3)
+
+                        with a.expander(f"{positive} Posivive Reviews"):
+                            pos_df = reviews_df[reviews_df.sentiment == 'positive'].reset_index()
+                            pos_df.index = pos_df.index + 1
+                            st.table(pos_df['reviews'])
+                        with b.expander(f"{mixed} Mixed Reviews"):
+                            mix_df = reviews_df[reviews_df.sentiment == 'mixed'].reset_index()
+                            mix_df.index = mix_df.index + 1
+                            st.table(mix_df['reviews'])
+                        with c.expander(f"{negative} Negative Reviews"):
+                            neg_df = reviews_df[reviews_df.sentiment == 'negative'].reset_index()
+                            neg_df.index = neg_df.index + 1
+                            st.table(neg_df['reviews'])
+            elif product.average_ratings != '0 out of 5':
+                a, c1, c3, b = st.columns((1,2,2,1), gap='small')
+            
+                c1.metric(label='Total Ratings', value=product.total_ratings)
+                avg_ratings = product.average_ratings.split()
+                c3.metric(label='Average Ratings', value=f"{avg_ratings[0]}/{avg_ratings[-1]}")
+            else:
+                st.error('No ratings or review yet.')
 
 a, b, c, d = st.columns((25,1,1,1))
 

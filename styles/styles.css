@@ -5,7 +5,7 @@
     padding: 10px;
     text-align: center;
     /* background: #1abc9c; */
-    background: linear-gradient(110deg, #fdcd3b 60%, #ffed4b 60%);
+    background: linear-gradient(110deg, #fdcc3bd2 60%, #ffed4bcb 60%);
     /* background: linear-gradient(-70deg, #fa7c30 30%, rgba(0, 0, 0, 0) 30%), url('Background.jpg'); */
     color: white;
     font-size: 100px;
@@ -24,7 +24,7 @@ h1[id='shopwisely'] div a+span {
     padding-top: 15px;
     position: relative;
     left: 9.7%;
-    top: -26px;
+    top: -26px; 
 }
 
 /* button */
@@ -56,24 +56,28 @@ a:hover {
     transition: 0.05s;
 }
 
-/*center metric label*/
-[data-testid="stMetricLabel"] > div:nth-child(1) {
-    justify-content: center;
-}
-
-/*center metric value*/
-[data-testid="stMetricValue"] > div:nth-child(1) {
-    justify-content: center;
-}
-
 /* metrics */
+div[data-testid="metric-container"]{
+    text-align: center; 
+}
+
+div[data-testid="stMetricValue"] div{
+    text-align: center;
+}
+
 div[data-testid="stMetricValue"]{
+    text-align: center;
     font-weight: 600;
     color: #610014;
     font-size: 300%;
 }
 
+label[data-testid="stMetricLabel"] div div{
+    text-align: center;
+}
+
 label[data-testid="stMetricLabel"] div div p{
+    text-align: center;
     font-size: large;
     font-weight: 600;
     color: #3d3d49;
@@ -87,6 +91,7 @@ h3[id$="-pages-available-do-you-want-to-run-for-all-pages"]{
 /* radio buttons */
 div[role="radiogroup"]{
     transform: scale(1.2);
+    /* text-align: center; */
 }
 
 label[data-baseweb="radio"] div + input + div:hover{
@@ -95,6 +100,13 @@ label[data-baseweb="radio"] div + input + div:hover{
 }
 
 /* number input  */
+
+h4[id*="specify-the-number-of-pages-to-analyze-from"]{
+    color: #610014;
+    font-size: 190%;
+}
+
+
 .step-down{
     background-color: #ac6440;
 }
@@ -116,6 +128,7 @@ h3[id^="total-number-of-pages-to-fetch-"] div a+span{
 [id*="product"] div a + span{
     text-align: center;
     font-size: 140%;
+    color: #610014;
 }
 
 /* dropdowns */
