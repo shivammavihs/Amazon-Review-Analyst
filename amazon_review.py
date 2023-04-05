@@ -1,6 +1,6 @@
 import re
 
-import requests
+import urllib.request
 import bs4
 
 class Product():
@@ -61,9 +61,16 @@ class Product():
 
     @staticmethod
     def get_soup(url):
-        headers = {"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36"}
-        result = requests.get(url=url, headers=headers).text
-        soup = bs4.BeautifulSoup(result,'html.parser') 
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+
+        # create a request object with the URL and headers
+        req = urllib.request.Request(url=url, headers=headers)
+
+        # make a GET request to the URL and get the HTML content
+        response = urllib.request.urlopen(req)
+        html_code = response.read()
+
+        soup = bs4.BeautifulSoup(html_code,'html.parser')
         return soup       
 
     def get_product_details(self):

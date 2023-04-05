@@ -307,7 +307,7 @@ if (submit and url) or (st.session_state.received_url and url) or st.session_sta
                         # print(f'{st.session_state.radio_state=}')
                         if st.session_state.radio_state == rad_options[1]:
                             st.markdown(f"#### Specify the number of pages to analyze from {product.num_pages} available pages.")
-                            page_num = st.number_input('enter the number of pages', value=0, min_value=0, max_value=product.num_pages, label_visibility='collapsed', key='page', on_change=set_page_num, args=('Hold', ))
+                            page_num = st.number_input('enter the number of pages', value=5, min_value=0, max_value=product.num_pages, label_visibility='collapsed', key='page', on_change=set_page_num, args=('Hold', ))
                             # print(f'{page_num=}, {st.session_state.num_pages=}, {st.session_state.continue_flow=}')
                             st.button('Continue', on_click=set_page_num, args=(True, ))
                             if st.session_state.continue_flow == True:
