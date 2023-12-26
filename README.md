@@ -6,10 +6,12 @@
 
 #### This is web application built and hosted using Streamlit, that provides users with product analytics by simply inputting the URL of product they are interested in purchasing. This includes information such as the number and type of ratings, as well as the number of reviews. Additionally, a backend ML model performs sentiment analysis on the reviews, providing users with a suggestion on whether or not to purchase the product based on the number of positive, negative, and mixed reviews.
 
+The default styling of streamlit has been modified by injecting custom `HTML` and `CSS Styling`.
+
 ## How to use it
 
 ##### Step-1: You need to get the `URL` of the product inorder to do an analysis before buying it. You can simply get the URL of the product by openiing the product in browser and copying the URL from URL bar.
-##### Step-2: Open this link: [Amazon Review Analyst](https://shivammavihs-amazon-review-analyst-app-611ipf.streamlit.app/)
+##### Step-2: Clone the repo. Install the `requirements.txt` file. And run the command `streamlit run app.py` 
 ##### Step-3: Paste the product URL into the `Enter the product URL` field and press `Enter` or click on `Submit` button. 
 
 ![Product URL Field](assets/Markdown_Images/Product_url_bar.png)

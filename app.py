@@ -427,10 +427,3 @@ b.markdown(f"""<a href='https://www.instagram.com/shivammavihs/'><img style="wid
 c.markdown(f"""<a href='https://github.com/shivammavihs'><img style="width:25px; height:25px" src='data:image/png;base64,{get_encoded_img(os.path.join(assets_path, 'github.png'))}'></a>""", unsafe_allow_html=True)
 d.markdown(f"""<a href='linkedin.com/in/shivam-patel-02998488'><img style="width:25px; height:25px" src='data:image/png;base64,{get_encoded_img(os.path.join(assets_path, 'linkedin (1).png'))}'></a>""", unsafe_allow_html=True)
 
-# c.write('github')
-# d.write('linkedin')
-# st.markdown('[![](http://www.google.com.au/images/nav_logo7.png)](https://www.instagram.com/shivammavihs/)')
-# html = f"<a href='{insta}'><img src='data:image/png;base64,{image_base64}'></a>" 
-# st.markdown(html, unsafe_allow_html=True)
-            
-            
